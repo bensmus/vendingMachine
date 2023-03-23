@@ -1,7 +1,14 @@
-import {Product, VendingMachine} from './vendingMachine'
+import {Product, VendingCollection, VendingMachine} from './vendingMachine'
+
+const arbitrarySlotId = Math.round(Math.random() * 9);
+const juiceProduct = {price: 2, description: 'juice'};
+const vendingCollectionRefill: VendingCollection = {
+    product: juiceProduct, 
+    count: 2
+};
 
 let vendingMachine: VendingMachine;
-const arbitrarySlotId = Math.round(Math.random() * 9);
+const removeFunc = () => vendingMachine.removeAtSlot(arbitrarySlotId);
 
 beforeEach(() => {
     vendingMachine = new VendingMachine(10);
@@ -18,15 +25,17 @@ test('Has 10 slots with emptyProduct', () => {
 
 test('Refill slot with nothing in it', () => {
     expect(vendingMachine.inspectSlot(arbitrarySlotId)).toBe('empty');
-    const vendingCollectionRefill = {
-        product: {price: 4, description: 'juice'}, 
-        count: 10
-    };
     vendingMachine.refill(arbitrarySlotId, vendingCollectionRefill);
     expect(vendingMachine.inspectSlot(arbitrarySlotId)).toBe('juice');
 })
 
 test('Remove from empty slot', () => {
-    const removeFunc = () => {vendingMachine.removeAtSlot(arbitrarySlotId)};
+    expect(removeFunc).toThrow(Error('no item at slot'));
+})
+
+test('Refill, then remove', () => {
+    vendingMachine.refill(arbitrarySlotId, vendingCollectionRefill);
+    expect(removeFunc()).toBe(juiceProduct);
+    expect(removeFunc()).toBe(juiceProduct);
     expect(removeFunc).toThrow(Error('no item at slot'));
 })

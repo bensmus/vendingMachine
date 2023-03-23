@@ -1,9 +1,9 @@
 import * as _ from 'lodash';
 
 export type Product = {price: number, description: string};
-const emptyProduct = {price: 0, description: 'empty'};
+export type VendingCollection = {product: Product, count: number};
 
-type VendingCollection = {product: Product, count: number};
+const emptyProduct = {price: 0, description: 'empty'};
 
 export class VendingMachine {
     #vendingState: Array<VendingCollection>;
