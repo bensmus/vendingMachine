@@ -10,46 +10,80 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _VendingMachine_vendingState;
+var _VendingMachine_instances, _VendingMachine_vendingState, _VendingMachine_validSlot, _VendingMachine_invalidSlotError, _VendingMachine_ifInvalidSlotThrow;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VendingMachine = void 0;
+exports.VendingMachine = exports.RefillError = exports.SlotError = void 0;
 const _ = require("lodash");
 const emptyProduct = { price: 0, description: 'empty' };
+class SlotError extends Error {
+}
+exports.SlotError = SlotError;
+;
+class RefillError extends Error {
+}
+exports.RefillError = RefillError;
+;
 class VendingMachine {
     // Construct vendingState of no products in the machine,
     // but the correct number of slots.
-    constructor(count) {
+    constructor(slotCount) {
+        _VendingMachine_instances.add(this);
         _VendingMachine_vendingState.set(this, void 0);
-        __classPrivateFieldSet(this, _VendingMachine_vendingState, new Array(count), "f");
+        this.slotCount = slotCount;
+        __classPrivateFieldSet(this, _VendingMachine_vendingState, new Array(slotCount), "f");
         __classPrivateFieldGet(this, _VendingMachine_vendingState, "f").fill({ product: emptyProduct, count: 0 });
         Object.seal(__classPrivateFieldGet(this, _VendingMachine_vendingState, "f"));
     }
+    // Valid slots are from 0 -> slotCount - 1.
+    getSlotCount() {
+        return this.slotCount;
+    }
+    // Returns 'empty' if there is no product in the slot, 
+    // 'some product description' if there is a product in the slot,
+    // throws error if slot is out of range.
     inspectSlot(slot) {
-        var _a;
-        return ((_a = __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot]) === null || _a === void 0 ? void 0 : _a.product.description) || null;
+        __classPrivateFieldGet(this, _VendingMachine_instances, "m", _VendingMachine_ifInvalidSlotThrow).call(this, slot);
+        return __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].product.description;
     }
     removeAtSlot(slot) {
-        if (__classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].count > 0) {
-            const boughtProduct = __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].product;
-            __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].count--;
+        __classPrivateFieldGet(this, _VendingMachine_instances, "m", _VendingMachine_ifInvalidSlotThrow).call(this, slot);
+        const vendingCollection = __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot];
+        if (vendingCollection.count > 0) {
+            const boughtProduct = vendingCollection.product;
+            vendingCollection.count--;
+            if (vendingCollection.count == 0) {
+                vendingCollection.product = emptyProduct;
+            }
             return boughtProduct;
         }
-        throw Error('no item at slot');
+        return null;
     }
     refill(slot, vendingCollectionRefill) {
+        __classPrivateFieldGet(this, _VendingMachine_instances, "m", _VendingMachine_ifInvalidSlotThrow).call(this, slot);
         if (vendingCollectionRefill.count == 0) {
-            throw Error('cannot refill vending machine with nothing');
+            throw new RefillError('Cannot refill vending machine with 0 products');
+        }
+        if (_.isEqual(vendingCollectionRefill.product, emptyProduct)) {
+            throw new RefillError('Cannot refill vending machine with empty product');
         }
         if (__classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].count != 0) {
             if (!_.isEqual(__classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].product, vendingCollectionRefill.product)) {
-                throw Error('cannot refill vending machine with non-matching products');
+                throw new RefillError('cannot refill vending machine with non-matching products');
             }
-            __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].count += vendingCollectionRefill.count;
         }
-        else {
-            __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot] = vendingCollectionRefill;
+        else { // Empty slot.
+            __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].product = vendingCollectionRefill.product;
         }
+        __classPrivateFieldGet(this, _VendingMachine_vendingState, "f")[slot].count += vendingCollectionRefill.count;
     }
 }
 exports.VendingMachine = VendingMachine;
-_VendingMachine_vendingState = new WeakMap();
+_VendingMachine_vendingState = new WeakMap(), _VendingMachine_instances = new WeakSet(), _VendingMachine_validSlot = function _VendingMachine_validSlot(slot) {
+    return slot >= 0 && slot <= this.slotCount - 1;
+}, _VendingMachine_invalidSlotError = function _VendingMachine_invalidSlotError(slot) {
+    return new SlotError(`Vending machine has ${this.slotCount} slots, attempting to access slot ${slot} (max slot ${this.slotCount - 1})`);
+}, _VendingMachine_ifInvalidSlotThrow = function _VendingMachine_ifInvalidSlotThrow(slot) {
+    if (!__classPrivateFieldGet(this, _VendingMachine_instances, "m", _VendingMachine_validSlot).call(this, slot)) {
+        throw __classPrivateFieldGet(this, _VendingMachine_instances, "m", _VendingMachine_invalidSlotError).call(this, slot);
+    }
+};
